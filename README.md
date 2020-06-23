@@ -1,9 +1,9 @@
 # MD Reader
 
-##first install snappy 
+## first install snappy 
 https://github.com/andrix/python-snappy
 
-###mac OSX:
+### mac OSX:
 > brew install snappy
 >
 >$ CPPFLAGS="-I/usr/local/include -L/usr/local/lib" pip3 install python-snappy
