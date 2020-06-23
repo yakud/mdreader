@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/yakud/lubo-marketdata/md"
+	"github.com/yakud/marketdata/md"
 )
 
 func main() {

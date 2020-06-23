@@ -1,4 +1,4 @@
-module github.com/yakud/lubo-marketdata
+module github.com/yakud/marketdata
 
 go 1.14
 
