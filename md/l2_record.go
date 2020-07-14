@@ -58,7 +58,7 @@ type L2Record struct {
 	TsReceiveUTC  time.Time
 	Type          uint8
 	Side          uint8
-	Size          uint64
+	Size          string
 	Price         float64
 }
 
@@ -99,7 +99,7 @@ func (r *L2Record) ToScvLine() []string {
 		log.Fatalf("undefined side: %d", r.Side)
 	}
 
-	csv[4] = strconv.FormatUint(r.Size, 10)
+	csv[4] = r.Size
 	csv[5] = strconv.FormatFloat(r.Price, 'g', -1, 64)
 	return csv
 }
@@ -129,7 +129,7 @@ func ConvertBytesToL2Record(buffer []byte, record *L2Record) error {
 	record.Side = buffer[sideOffset]
 
 	// size
-	record.Size = binary.LittleEndian.Uint64(buffer[sizeOffset : sizeOffset+sizeLength])
+	record.Size = lotToDecimalQuantity(binary.LittleEndian.Uint64(buffer[sizeOffset : sizeOffset+sizeLength]), -8)
 
 	//double   price; // 8
 	record.Price = float64FromBytes(buffer[priceOffset : priceOffset+priceLength])
@@ -141,4 +141,94 @@ func float64FromBytes(bytes []byte) float64 {
 	bits := binary.LittleEndian.Uint64(bytes)
 	float := math.Float64frombits(bits)
 	return float
+}
+
+const smallsString = "00010203040506070809" +
+	"10111213141516171819" +
+	"20212223242526272829" +
+	"30313233343536373839" +
+	"40414243444546474849" +
+	"50515253545556575859" +
+	"60616263646566676869" +
+	"70717273747576777879" +
+	"80818283848586878889" +
+	"90919293949596979899"
+
+func formatBits(u uint64, exp int) []byte {
+	var a [40]byte
+	i := len(a)
+
+	if exp > 0 {
+		i -= exp
+		for j := 0; j < exp; j++ {
+			a[i+j] = '0'
+		}
+	}
+
+	p := 0
+	for u >= 100 {
+		is := u % 100 * 2
+		u /= 100
+		i -= 2
+
+		if p == exp {
+			a[i+1] = '.'
+			i--
+		}
+		p--
+		a[i+1] = smallsString[is+1]
+		if p == exp {
+			a[i] = '.'
+			i--
+		}
+		p--
+		a[i+0] = smallsString[is+0]
+	}
+
+	// us < 100
+	is := u * 2
+	i--
+	if p == exp {
+		a[i] = '.'
+		i--
+	}
+	p--
+	a[i] = smallsString[is+1]
+	if u >= 10 {
+		i--
+		if p == exp {
+			a[i] = '.'
+			i--
+		}
+		p--
+		a[i] = smallsString[is]
+	}
+	for p >= exp {
+		i--
+		if p == exp {
+			a[i] = '.'
+			i--
+		}
+		p--
+		a[i] = '0'
+	}
+	return a[i:]
+}
+
+func lotToDecimalQuantity(lot uint64, exp int) string {
+	if lot == 0 {
+		return "0"
+	}
+	return string(formatBits(lot, exp))
+}
+
+func iLotToQuantity(lot int64, exp int) string {
+	if lot == 0 {
+		return "0"
+	}
+	if lot > 0 {
+		return string(formatBits(uint64(lot), exp))
+	} else {
+		return "-" + string(formatBits(uint64(-lot), exp))
+	}
 }
